@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from sqlalchemy.exc import IntegrityError
-from decorateur import admin_required
+from .decorateur import admin_required
 from flask_jwt_extended import jwt_required
 
 
@@ -35,14 +35,20 @@ def create_product():
     if not data:
         return jsonify({"error": "Aucune donnée reçue"}), 400
 
-    name = data.get("name")
-    price = data.get("price")
+    nom = data.get("nom")
+    price = data.get("prix")
     description = data.get("description")
+    categorie = data.get("categorie")
+    quantite_stock = data.get("quantite_stock")
 
-    if not name or not price:
-        return jsonify({"error": "name and price are required"}), 400
+    if not nom or not price:
+        return jsonify({"error": "nom and price are required"}), 400
 
-    product = Product(name=name, price=price, description=description)
+    product = Product(nom=nom, 
+                      prix=price, 
+                      description=description,
+                      categorie = categorie,
+                      quantite_stock = quantite_stock)
 
     try:
         db.session.add(product)
@@ -67,16 +73,22 @@ def update_product(product_id):
     if not data:
         return jsonify({"error": "Aucune donnée reçue"}), 400
 
-    name = data.get("name")
-    price = data.get("price")
+    name = data.get("nom")
+    prix = data.get("prix")
     description = data.get("description")
-
+    categorie = data.get("categorie")
+    quantite_stock = data.get("quantite_stock")
+    
     if name:
         product.name = name
-    if price:
-        product.price = price
+    if prix:
+        product.prix = prix
     if description:
         product.description = description
+    if categorie:
+        product.categorie = categorie
+    if quantite_stock :
+        product.quantite_stock = quantite_stock
 
     try:
         db.session.commit()

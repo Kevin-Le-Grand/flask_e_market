@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request  
 from flask_jwt_extended import get_jwt, get_jwt_identity, jwt_required
 from sqlalchemy.exc import IntegrityError
-from decorateur import admin_required
+from .decorateur import admin_required
 
 from app import db
 from app.models import Order

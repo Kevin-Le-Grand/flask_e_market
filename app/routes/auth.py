@@ -27,10 +27,10 @@ def register():
     if User.query.filter_by(email=email).first():
         return jsonify({"error": "Un compte existe déjà avec cet email"}), 409
 
-    if User.query.filter_by(username=username).first():
+    if User.query.filter_by(nom=username).first():
         return jsonify({"error": "Ce nom d'utilisateur est déjà pris"}), 409
 
-    user = User(username=username, email=email)
+    user = User(nom=username, email=email)
     user.set_password(password)
 
     try:
@@ -71,7 +71,7 @@ def login():
         "access_token": access_token,
         "user": {
             "id": user.id,
-            "username": user.username,
+            "username": user.nom,
             "email": user.email,
         }
     }), 200
