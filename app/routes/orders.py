@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify, request  
 from flask_jwt_extended import get_jwt, get_jwt_identity, jwt_required
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import select
 from .decorateur import admin_required
 
 from app import db
@@ -16,9 +17,15 @@ def get_orders():
     current_user_id = int(get_jwt_identity())
 
     if claims.get("role") == "admin":
-        orders = Order.query.order_by(Order.date_commande.desc()).all()
+        orders = db.session.scalars(
+            select(Order).order_by(Order.date_commande.desc())
+        ).all()
     else:
-        orders = Order.query.filter_by(utilisateur_id=current_user_id).order_by(Order.date_commande.desc()).all()
+        orders = db.session.scalars(
+            select(Order)
+            .where(Order.utilisateur_id == current_user_id)
+            .order_by(Order.date_commande.desc())
+        ).all()
 
     return jsonify({
         "orders": [order.to_dict() for order in orders]
@@ -31,7 +38,7 @@ def get_order(order_id):
     claims = get_jwt()
     current_user_id = int(get_jwt_identity())
 
-    order = Order.query.get(order_id)
+    order = db.session.get(Order, order_id)
 
     if not order:
         return jsonify({"error": "Commande non trouvée"}), 404
@@ -74,7 +81,7 @@ def create_order():
 @orders_bp.route("/<int:order_id>", methods=["PATCH"])
 @admin_required()
 def update_order_status(order_id):
-    order = Order.query.get(order_id)
+    order = db.session.get(Order, order_id)
 
     if not order:
         return jsonify({"error": "Commande non trouvée"}), 404
@@ -102,7 +109,7 @@ def get_order_items(order_id):
     claims = get_jwt()
     current_user_id = int(get_jwt_identity())
 
-    order = Order.query.get(order_id)
+    order = db.session.get(Order, order_id)
 
     if not order:
         return jsonify({"error": "Commande non trouvée"}), 404
