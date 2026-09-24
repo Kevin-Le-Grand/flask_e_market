@@ -15,13 +15,13 @@ products_bp = Blueprint("products", __name__, url_prefix="/api/produits")
 @jwt_required()
 # Récupérer la liste des produits (GET /api/produits)
 def get_products():
-    products = Product.query.all()
+    products = db.session.scalars(db.select(Product)).all()
     return jsonify([product.to_dict() for product in products]), 200
 
 @products_bp.route("/<int:product_id>", methods=["GET"])
 @jwt_required()
 def get_id_product(product_id):
-    product = Product.query.get(product_id)
+    product = db.session.get(Product, product_id)
     if not product:
         return jsonify({"error": "Produit non trouvé"}), 404
     return product.to_dict(), 200
@@ -64,7 +64,7 @@ def create_product():
 @products_bp.route("/<int:product_id>", methods=["PUT"])
 @admin_required()
 def update_product(product_id):
-    product = Product.query.get(product_id)
+    product = db.session.get(Product, product_id)
     if not product:
         return jsonify({"error": "Produit non trouvé"}), 404
 
@@ -103,7 +103,7 @@ def update_product(product_id):
 @products_bp.route("/<int:product_id>", methods=["DELETE"])
 @admin_required()
 def delete_product(product_id):
-    product = Product.query.get(product_id)
+    product = db.session.get(Product, product_id)
     if not product:
         return jsonify({"error": "Produit non trouvé"}), 404
 
