@@ -136,7 +136,7 @@ Les tests utilisent une base SQLite temporaire en mémoire et ne modifient pas
 la base locale `digimarket.db` :
 
 ```bash
-python -m pytest -q
+python -m pytest tests -q
 ```
 
 Une GitHub Action exécute automatiquement ces tests à chaque `push` sur le
