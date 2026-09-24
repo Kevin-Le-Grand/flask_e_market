@@ -73,14 +73,14 @@ def update_product(product_id):
     if not data:
         return jsonify({"error": "Aucune donnée reçue"}), 400
 
-    name = data.get("nom")
+    nom = data.get("nom")
     prix = data.get("prix")
     description = data.get("description")
     categorie = data.get("categorie")
     quantite_stock = data.get("quantite_stock")
     
-    if name:
-        product.name = name
+    if nom:
+        product.nom = nom
     if prix:
         product.prix = prix
     if description:

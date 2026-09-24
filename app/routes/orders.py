@@ -51,7 +51,15 @@ def create_order():
         return jsonify({"error": "Aucune donnée reçue"}), 400
 
     current_user_id = int(get_jwt_identity())
-    order = Order(utilisateur_id=current_user_id, details=data.get("details"))
+    adresse_livraison = data.get("adresse_livraison")
+
+    if not adresse_livraison:
+        return jsonify({"error": "adresse_livraison est requise"}), 400
+
+    order = Order(
+        utilisateur_id=current_user_id,
+        adresse_livraison=adresse_livraison,
+    )
 
     try:
         db.session.add(order)
