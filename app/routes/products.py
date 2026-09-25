@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import select
 from .decorateur import admin_required
 from flask_jwt_extended import jwt_required
 
@@ -10,21 +11,33 @@ from app.models import Product
 products_bp = Blueprint("products", __name__, url_prefix="/api/produits")
 
 
-
+# Récupérer la liste des produits (GET /api/produits)
 @products_bp.route("", methods=["GET"])
 @jwt_required()
-# Récupérer la liste des produits (GET /api/produits)
 def get_products():
     products = db.session.scalars(db.select(Product)).all()
     return jsonify([product.to_dict() for product in products]), 200
 
-@products_bp.route("/<int:product_id>", methods=["GET"])
+# Récupérer la liste des produits par nom ou description (GET /api/produits)
+@products_bp.route("/", methods=["GET"])
 @jwt_required()
-def get_id_product(product_id):
-    product = db.session.get(Product, product_id)
-    if not product:
-        return jsonify({"error": "Produit non trouvé"}), 404
-    return product.to_dict(), 200
+def get_product():
+    nom = request.args.get("nom")
+    description = request.args.get("description")
+
+    if not nom and not description:
+        return jsonify({"error": "Merci de fournir, nom ou description"}), 400
+
+    requete = select(Product)
+
+    if nom:
+        requete = requete.where(Product.nom.ilike(f"%{nom}%"))
+
+    if description:
+        requete = requete.where(Product.description.ilike(f"%{description}%"))
+
+    products = db.session.execute(requete).scalars().all()
+    return jsonify([p.to_dict() for p in products])
 
 # Créer un nouveau produit (POST /api/produits) - Admin uniquement
 @products_bp.route("", methods=["POST"])

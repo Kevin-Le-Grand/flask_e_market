@@ -1,5 +1,5 @@
 from app import db
-from app.models import User
+from app.models import User, Product
 
 
 # Helpers utilises par les tests d'authentification et d'autorisation.
@@ -70,6 +70,27 @@ def test_client_ne_peut_pas_gerer_les_produits(client):
     )
 
     assert response.status_code == 403
+
+
+def test_recuperation_de_produits_par_nom_ou_description(client, app):
+    with app.app_context():
+        product = Product(
+            nom="Clavier",
+            prix=49.99,
+            description="Clavier mécanique",
+            categorie="Informatique",
+            quantite_stock=5
+        )
+        db.session.add(product)
+        db.session.commit()
+
+    response = client.get("/api/produits", params={"nom": "Clavier"})
+    assert response.status_code == 200
+    assert len(response.get_json()) == 1
+
+    response = client.get("/api/produits", params={"description": "mécanique"})
+    assert response.status_code == 200
+    assert len(response.get_json()) == 1
 
 
 def test_administrateur_peut_creer_modifier_supprimer_produit(client, app):
