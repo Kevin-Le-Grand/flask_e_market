@@ -84,13 +84,15 @@ def test_recuperation_de_produits_par_nom_ou_description(client, app):
         db.session.add(product)
         db.session.commit()
 
+    inscrire_utilisateur(client)
     token = connecter_utilisateur(client)
-    
-    response = client.get("/api/produits", query_string={"nom": "Clavier"}, headers={"Authorization": f"Bearer {token}"})
+    headers = creer_entetes_authentification(token)
+
+    response = client.get("/api/produits", query_string={"nom": "Clavier"}, headers=headers)
     assert response.status_code == 200
     assert len(response.get_json()) == 1
 
-    response = client.get("/api/produits", query_string={"description": "mécanique"}, headers={"Authorization": f"Bearer {token}"})
+    response = client.get("/api/produits", query_string={"description": "mécanique"}, headers=headers)
     assert response.status_code == 200
     assert len(response.get_json()) == 1
 
