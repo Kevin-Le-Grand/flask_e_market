@@ -84,11 +84,11 @@ def test_recuperation_de_produits_par_nom_ou_description(client, app):
         db.session.add(product)
         db.session.commit()
 
-    response = client.get("/api/produits", params={"nom": "Clavier"})
+    response = client.get("/api/produits", query_string={"nom": "Clavier"})
     assert response.status_code == 200
     assert len(response.get_json()) == 1
 
-    response = client.get("/api/produits", params={"description": "mécanique"})
+    response = client.get("/api/produits", query_string={"description": "mécanique"})
     assert response.status_code == 200
     assert len(response.get_json()) == 1
 
