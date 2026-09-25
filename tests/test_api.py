@@ -1,8 +1,7 @@
 from app import db
-from app.models import User, Product
+from app.models import Product
 
 
-# Helpers utilises par les tests d'authentification et d'autorisation.
 def inscrire_utilisateur(client, nom="client", email="client@example.com"):
     response = client.post(
         "/api/auth/register",
@@ -13,20 +12,6 @@ def inscrire_utilisateur(client, nom="client", email="client@example.com"):
         },
     )
     assert response.status_code == 201
-
-
-def connecter_utilisateur(client, email="client@example.com"):
-    response = client.post(
-        "/api/auth/login",
-        json={"email": email, "password": "password123"},
-    )
-    assert response.status_code == 200
-    return response.get_json()["access_token"]
-
-
-def creer_entetes_authentification(token):
-    return {"Authorization": f"Bearer {token}"}
-
 
 def test_verifier_etat_api(client):
     response = client.get("/health")
@@ -54,13 +39,10 @@ def test_produits_exigent_une_authentification(client):
     assert response.status_code == 401
 
 
-def test_client_ne_peut_pas_gerer_les_produits(client):
-    inscrire_utilisateur(client)
-    token = connecter_utilisateur(client)
-
+def test_client_ne_peut_pas_gerer_les_produits(client, client_auth):
     response = client.post(
         "/api/produits",
-        headers=creer_entetes_authentification(token),
+        headers=client_auth,
         json={
             "nom": "Clavier",
             "prix": 49.99,
@@ -72,7 +54,7 @@ def test_client_ne_peut_pas_gerer_les_produits(client):
     assert response.status_code == 403
 
 
-def test_recuperation_de_produits_par_nom_ou_description(client, app):
+def test_recuperation_de_produits_par_nom_ou_description(client, app, client_auth):
     with app.app_context():
         product = Product(
             nom="Clavier",
@@ -84,28 +66,16 @@ def test_recuperation_de_produits_par_nom_ou_description(client, app):
         db.session.add(product)
         db.session.commit()
 
-    inscrire_utilisateur(client)
-    token = connecter_utilisateur(client)
-    headers = creer_entetes_authentification(token)
-
-    response = client.get("/api/produits", query_string={"nom": "Clavier"}, headers=headers)
+    response = client.get("/api/produits", query_string={"nom": "Clavier"}, headers=client_auth)
     assert response.status_code == 200
     assert len(response.get_json()) == 1
 
-    response = client.get("/api/produits", query_string={"description": "mécanique"}, headers=headers)
+    response = client.get("/api/produits", query_string={"description": "mécanique"}, headers=client_auth)
     assert response.status_code == 200
     assert len(response.get_json()) == 1
 
 
-def test_administrateur_peut_creer_modifier_supprimer_produit(client, app):
-    with app.app_context():
-        admin = User(nom="admin", email="admin@example.com", role="admin")
-        admin.set_password("password123")
-        db.session.add(admin)
-        db.session.commit()
-
-    token = connecter_utilisateur(client, "admin@example.com")
-    headers = creer_entetes_authentification(token)
+def test_administrateur_peut_creer_modifier_supprimer_produit(client, admin_auth):
     product_data = {
         "nom": "Clavier",
         "prix": 49.99,
@@ -114,44 +84,40 @@ def test_administrateur_peut_creer_modifier_supprimer_produit(client, app):
     }
 
     create_response = client.post(
-        "/api/produits", headers=headers, json=product_data
+        "/api/produits", headers=admin_auth, json=product_data
     )
     assert create_response.status_code == 201
     product_id = create_response.get_json()["id"]
 
     update_response = client.put(
         f"/api/produits/{product_id}",
-        headers=headers,
+        headers=admin_auth,
         json={"nom": "Clavier mecanique"},
     )
     assert update_response.status_code == 200
     assert update_response.get_json()["nom"] == "Clavier mecanique"
 
     delete_response = client.delete(
-        f"/api/produits/{product_id}", headers=headers
+        f"/api/produits/{product_id}", headers=admin_auth
     )
     assert delete_response.status_code == 200
 
 
-def test_utilisateur_authentifie_peut_creer_et_lister_commandes(client):
-    inscrire_utilisateur(client)
-    token = connecter_utilisateur(client)
-    headers = creer_entetes_authentification(token)
-
+def test_utilisateur_authentifie_peut_creer_et_lister_commandes(client, client_auth):
     invalid_response = client.post(
-        "/api/commandes", headers=headers, json={}
+        "/api/commandes", headers=client_auth, json={}
     )
     assert invalid_response.status_code == 400
 
     create_response = client.post(
         "/api/commandes",
-        headers=headers,
+        headers=client_auth,
         json={"adresse_livraison": "1 rue des Tests"},
     )
     assert create_response.status_code == 201
     assert create_response.get_json()["adresse_livraison"] == "1 rue des Tests"
 
-    list_response = client.get("/api/commandes", headers=headers)
+    list_response = client.get("/api/commandes", headers=client_auth)
     assert list_response.status_code == 200
     assert len(list_response.get_json()["orders"]) == 1
 
@@ -163,130 +129,93 @@ def test_commandes_exigent_une_authentification(client):
     assert response.status_code == 401
 
 
-def test_utilisateur_peut_consulter_sa_commande_et_ses_lignes(client):
-    inscrire_utilisateur(client)
-    token = connecter_utilisateur(client)
-    headers = creer_entetes_authentification(token)
-
+def test_utilisateur_peut_consulter_sa_commande_et_ses_lignes(client, client_auth):
     creation = client.post(
         "/api/commandes",
-        headers=headers,
+        headers=client_auth,
         json={"adresse_livraison": "1 rue des Tests"},
     )
     commande_id = creation.get_json()["id"]
 
-    detail = client.get(f"/api/commandes/{commande_id}", headers=headers)
+    detail = client.get(f"/api/commandes/{commande_id}", headers=client_auth)
     assert detail.status_code == 200
     assert detail.get_json()["adresse_livraison"] == "1 rue des Tests"
 
     lignes = client.get(
-        f"/api/commandes/{commande_id}/lignes", headers=headers
+        f"/api/commandes/{commande_id}/lignes", headers=client_auth
     )
     assert lignes.status_code == 200
     assert lignes.get_json() == {"lignes": []}
 
 
-def test_utilisateur_ne_peut_pas_consulter_la_commande_d_un_autre(client, app):
-    inscrire_utilisateur(client)
-    premier_token = connecter_utilisateur(client)
+def test_utilisateur_ne_peut_pas_consulter_la_commande_d_un_autre(
+    client, client_auth, second_client_auth
+):
     premiere_commande = client.post(
         "/api/commandes",
-        headers=creer_entetes_authentification(premier_token),
+        headers=client_auth,
         json={"adresse_livraison": "1 rue des Tests"},
     )
     commande_id = premiere_commande.get_json()["id"]
 
-    inscrire_utilisateur(
-        client, nom="second_client", email="second@example.com"
-    )
-    second_token = connecter_utilisateur(client, "second@example.com")
-
     detail = client.get(
         f"/api/commandes/{commande_id}",
-        headers=creer_entetes_authentification(second_token),
+        headers=second_client_auth,
     )
     assert detail.status_code == 403
     assert detail.get_json()["error"] == "Accès refusé"
 
 
 def test_administrateur_peut_voir_toutes_les_commandes_et_modifier_statut(
-    client, app
+    client, client_auth, admin_auth
 ):
-    inscrire_utilisateur(client)
-    client_token = connecter_utilisateur(client)
     creation = client.post(
         "/api/commandes",
-        headers=creer_entetes_authentification(client_token),
+        headers=client_auth,
         json={"adresse_livraison": "1 rue des Tests"},
     )
     commande_id = creation.get_json()["id"]
 
-    with app.app_context():
-        administrateur = User(
-            nom="admin", email="admin@example.com", role="admin"
-        )
-        administrateur.set_password("password123")
-        db.session.add(administrateur)
-        db.session.commit()
-
-    admin_token = connecter_utilisateur(client, "admin@example.com")
-    admin_headers = creer_entetes_authentification(admin_token)
-
-    liste = client.get("/api/commandes", headers=admin_headers)
+    liste = client.get("/api/commandes", headers=admin_auth)
     assert liste.status_code == 200
     assert len(liste.get_json()["orders"]) == 1
 
     modification = client.patch(
         f"/api/commandes/{commande_id}",
-        headers=admin_headers,
+        headers=admin_auth,
         json={"statut": "expediee"},
     )
     assert modification.status_code == 200
     assert modification.get_json()["statut"] == "expediee"
 
 
-def test_client_ne_peut_pas_modifier_le_statut_d_une_commande(client):
-    inscrire_utilisateur(client)
-    token = connecter_utilisateur(client)
-    headers = creer_entetes_authentification(token)
-
+def test_client_ne_peut_pas_modifier_le_statut_d_une_commande(client, client_auth):
     creation = client.post(
         "/api/commandes",
-        headers=headers,
+        headers=client_auth,
         json={"adresse_livraison": "1 rue des Tests"},
     )
     commande_id = creation.get_json()["id"]
 
     modification = client.patch(
         f"/api/commandes/{commande_id}",
-        headers=headers,
+        headers=client_auth,
         json={"statut": "expediee"},
     )
     assert modification.status_code == 403
 
 
-def test_modifier_commande_exige_un_statut(client, app):
-    inscrire_utilisateur(client)
-    client_token = connecter_utilisateur(client)
+def test_modifier_commande_exige_un_statut(client, client_auth, admin_auth):
     creation = client.post(
         "/api/commandes",
-        headers=creer_entetes_authentification(client_token),
+        headers=client_auth,
         json={"adresse_livraison": "1 rue des Tests"},
     )
     commande_id = creation.get_json()["id"]
 
-    with app.app_context():
-        administrateur = User(
-            nom="admin", email="admin@example.com", role="admin"
-        )
-        administrateur.set_password("password123")
-        db.session.add(administrateur)
-        db.session.commit()
-
-    token = connecter_utilisateur(client, "admin@example.com")
     response = client.patch(
         f"/api/commandes/{commande_id}",
-        headers=creer_entetes_authentification(token),
+        headers=admin_auth,
         json={},
     )
 
