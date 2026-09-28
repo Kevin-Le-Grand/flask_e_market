@@ -130,7 +130,7 @@ Authorization: Bearer <votre_token>
 deactivate
 ```
 
-## Exécuter les tests
+## Exécuter les tests pytest
 
 Les tests utilisent une base SQLite temporaire en mémoire et ne modifient pas
 la base locale `digimarket.db` :
@@ -143,3 +143,8 @@ Une GitHub Action exécute automatiquement ces tests à chaque `push` sur le
 dépôt. La variable `JWT_SECRET_KEY` de la CI est fournie par le workflow et
  ne nécessite aucune configuration supplémentaire.
 
+
+## Suivre le notebook test.ipynb
+
+Le notebook permet de tester toutes les routes de l'api et de voir son fonoctionnement. Pensez à bien démarrer l'api avant de lancer les cellules 
+du notebook.
