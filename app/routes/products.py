@@ -10,23 +10,22 @@ from app.models import Product
 
 products_bp = Blueprint("products", __name__, url_prefix="/api/produits")
 
-
-# Récupérer la liste des produits (GET /api/produits)
-@products_bp.route("", methods=["GET"])
+# Récupérer un produit spécifique (GET /api/produits/{id})
+@products_bp.route("/<int:product_id>", methods=["GET"])
 @jwt_required()
-def get_products():
-    products = db.session.scalars(db.select(Product)).all()
-    return jsonify([product.to_dict() for product in products]), 200
+def get_product_by_id(product_id):
+    product = db.session.get(Product, product_id)
+    if not product:
+        return jsonify({"error": "Produit non trouvé"}), 404
+    return jsonify(product.to_dict()), 200
+
 
 # Récupérer la liste des produits par nom ou description (GET /api/produits)
-@products_bp.route("/", methods=["GET"])
+@products_bp.route("", methods=["GET"])
 @jwt_required()
 def get_product():
     nom = request.args.get("nom")
     description = request.args.get("description")
-
-    if not nom and not description:
-        return jsonify({"error": "Merci de fournir, nom ou description"}), 400
 
     requete = select(Product)
 
@@ -37,7 +36,7 @@ def get_product():
         requete = requete.where(Product.description.ilike(f"%{description}%"))
 
     products = db.session.execute(requete).scalars().all()
-    return jsonify([p.to_dict() for p in products])
+    return jsonify([p.to_dict() for p in products]), 200
 
 # Créer un nouveau produit (POST /api/produits) - Admin uniquement
 @products_bp.route("", methods=["POST"])
@@ -55,7 +54,7 @@ def create_product():
     quantite_stock = data.get("quantite_stock")
 
     if not nom or not price:
-        return jsonify({"error": "nom and price are required"}), 400
+        return jsonify({"error": "Le nom et le prix sont obligatoires"}), 400
 
     product = Product(nom=nom, 
                       prix=price, 
@@ -100,7 +99,7 @@ def update_product(product_id):
         product.description = description
     if categorie:
         product.categorie = categorie
-    if quantite_stock :
+    if quantite_stock is not None:
         product.quantite_stock = quantite_stock
 
     try:

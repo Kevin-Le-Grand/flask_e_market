@@ -39,8 +39,8 @@ def test_creer_commande_avec_produits_et_mettre_a_jour_le_stock(
     order = response.get_json()
     assert order["adresse_livraison"] == "1 rue des Tests"
     assert order["statut"] == "en_attente"
-    assert order["lignes"][0]["product_id"] == produit["id"]
-    assert order["lignes"][0]["quantity"] == 2
+    assert order["lignes"][0]["produit_id"] == produit["id"]
+    assert order["lignes"][0]["quantite"] == 2
     assert order["lignes"][0]["prix_unitaire"] == produit["prix"]
 
     with app.app_context():
@@ -107,7 +107,7 @@ def test_client_consulte_sa_commande_et_ses_lignes(
 
     assert detail.status_code == 200
     assert lignes.status_code == 200
-    assert lignes.get_json()["lignes"][0]["quantity"] == 2
+    assert lignes.get_json()["lignes"][0]["quantite"] == 2
 
 
 def test_client_ne_peut_pas_consulter_la_commande_d_un_autre(
